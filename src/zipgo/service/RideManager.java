@@ -37,8 +37,7 @@ public class RideManager {
             throw new NoDriverAvailableException("No drivers available at the moment");
         }
 
-        // Assign a default vehicle (can be enhanced later)
-        Vehicle vehicle = new Car("TEMP123");
+        Vehicle vehicle = availableDriver.getVehicle();
 
         Ride ride = new Ride(rideId, rider, distance);
         ride.assignDriver(availableDriver, vehicle);
@@ -74,14 +73,19 @@ public class RideManager {
         }
     }
 
-    // View All Rides
+    // Display all rides
     public void displayAllRides() {
         for (Ride ride : rides) {
             ride.displayRideDetails();
         }
     }
 
-    // Find Ride
+    // Getter for file saving
+    public List<Ride> getRides() {
+        return rides;
+    }
+
+    // Helper method
     private Ride findRideById(String rideId) {
         for (Ride ride : rides) {
             if (ride.getRideId().equals(rideId)) {
