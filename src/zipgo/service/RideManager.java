@@ -11,17 +11,22 @@ public class RideManager {
     private Map<String, Driver> drivers = new HashMap<>();
     private List<Ride> rides = new ArrayList<>();
 
-    // Register Rider
     public void addRider(Rider rider) {
         riders.put(rider.getUserId(), rider);
     }
 
-    // Register Driver
     public void addDriver(Driver driver) {
         drivers.put(driver.getUserId(), driver);
     }
 
-    // Request Ride
+    public Rider getRider(String riderId) {
+        return riders.get(riderId);
+    }
+
+    public Driver getDriver(String driverId) {
+        return drivers.get(driverId);
+    }
+
     public Ride requestRide(String rideId, String riderId, double distance)
             throws NoDriverAvailableException {
 
@@ -47,7 +52,6 @@ public class RideManager {
         return ride;
     }
 
-    // Find available driver
     private Driver findAvailableDriver() {
         for (Driver driver : drivers.values()) {
             if (driver.isAvailable()) {
@@ -57,7 +61,6 @@ public class RideManager {
         return null;
     }
 
-    // Start Ride
     public void startRide(String rideId) {
         Ride ride = findRideById(rideId);
         if (ride != null) {
@@ -65,7 +68,6 @@ public class RideManager {
         }
     }
 
-    // Complete Ride
     public void completeRide(String rideId) {
         Ride ride = findRideById(rideId);
         if (ride != null) {
@@ -73,19 +75,16 @@ public class RideManager {
         }
     }
 
-    // Display all rides
     public void displayAllRides() {
         for (Ride ride : rides) {
             ride.displayRideDetails();
         }
     }
 
-    // Getter for file saving
     public List<Ride> getRides() {
         return rides;
     }
 
-    // Helper method
     private Ride findRideById(String rideId) {
         for (Ride ride : rides) {
             if (ride.getRideId().equals(rideId)) {
