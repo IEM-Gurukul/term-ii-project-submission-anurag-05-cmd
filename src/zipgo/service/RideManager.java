@@ -73,6 +73,21 @@ public class RideManager {
         return rides;
     }
 
+    // Reports
+    public int getTotalRides() {
+        return rides.size();
+    }
+
+    public double getTotalEarnings() {
+        double total = 0;
+        for (Ride r : rides) {
+            if (r.getStatus() == RideStatus.COMPLETED) {
+                total += r.getFare();
+            }
+        }
+        return total;
+    }
+
     private Ride findRideById(String id) {
         for (Ride r : rides) {
             if (r.getRideId().equals(id)) return r;

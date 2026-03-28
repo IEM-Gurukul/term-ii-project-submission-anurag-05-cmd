@@ -23,13 +23,16 @@ public class ZipGoApp {
         rm.addDriver(new Driver("D1", "Rahul", "9000000002", car));
         rm.addDriver(new Driver("D2", "Amit", "9000000003", bike));
 
-        System.out.println("===== ZipGo CLI =====");
+        System.out.println("Welcome to ZipGo");
 
         while (true) {
-            System.out.println("\n1. Rider Login\n2. Exit");
-            int ch = sc.nextInt();
+            System.out.println("\n1. Book Ride");
+            System.out.println("2. View Report");
+            System.out.println("3. Exit");
 
-            if (ch == 1) {
+            int choice = sc.nextInt();
+
+            if (choice == 1) {
                 System.out.print("Enter Rider ID: ");
                 String id = sc.next();
 
@@ -45,10 +48,10 @@ public class ZipGoApp {
                 try {
                     Ride ride = rm.requestRide("R" + System.currentTimeMillis(), id, dist);
 
-                    System.out.println("\nDriver Assigned:");
+                    System.out.println("\nDriver assigned:");
                     ride.displayRideDetails();
 
-                    System.out.println("Cancel ride? (y/n)");
+                    System.out.print("Cancel ride? (y/n): ");
                     String cancel = sc.next();
 
                     if (cancel.equalsIgnoreCase("y")) {
@@ -57,7 +60,7 @@ public class ZipGoApp {
                         continue;
                     }
 
-                    System.out.println("\nRide starting...");
+                    System.out.println("\nStarting ride...");
                     Thread.sleep(2000);
 
                     rm.startRide(ride.getRideId());
@@ -67,14 +70,19 @@ public class ZipGoApp {
                     Thread.sleep(3000);
 
                     rm.completeRide(ride.getRideId());
-                    System.out.println("\nRide completed!");
+                    System.out.println("\nRide completed");
                     ride.displayRideDetails();
 
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
                 }
 
-            } else break;
+            } else if (choice == 2) {
+                System.out.println("\nTotal rides: " + rm.getTotalRides());
+                System.out.println("Total earnings: ₹" + rm.getTotalEarnings());
+            } else {
+                break;
+            }
         }
 
         FileManager.saveRides(rm.getRides());
