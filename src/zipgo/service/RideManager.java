@@ -1,7 +1,7 @@
 package zipgo.service;
 
 import zipgo.model.*;
-import zipgo.exception.NoDriverAvailableException;
+import zipgo.exception.*;
 
 import java.util.*;
 
@@ -31,65 +31,51 @@ public class RideManager {
             throws NoDriverAvailableException {
 
         Rider rider = riders.get(riderId);
-
         if (rider == null) {
             throw new IllegalArgumentException("Rider not found");
         }
 
-        Driver availableDriver = findAvailableDriver();
-
-        if (availableDriver == null) {
-            throw new NoDriverAvailableException("No drivers available at the moment");
+        Driver driver = findAvailableDriver();
+        if (driver == null) {
+            throw new NoDriverAvailableException("No drivers available");
         }
 
-        Vehicle vehicle = availableDriver.getVehicle();
-
         Ride ride = new Ride(rideId, rider, distance);
-        ride.assignDriver(availableDriver, vehicle);
-
+        ride.assignDriver(driver, driver.getVehicle());
         rides.add(ride);
 
         return ride;
     }
 
     private Driver findAvailableDriver() {
-        for (Driver driver : drivers.values()) {
-            if (driver.isAvailable()) {
-                return driver;
-            }
+        for (Driver d : drivers.values()) {
+            if (d.isAvailable()) return d;
         }
         return null;
     }
 
-    public void startRide(String rideId) {
+    public void startRide(String rideId) throws InvalidRideStateException {
         Ride ride = findRideById(rideId);
-        if (ride != null) {
-            ride.startRide();
-        }
+        if (ride != null) ride.startRide();
     }
 
-    public void completeRide(String rideId) {
+    public void completeRide(String rideId) throws InvalidRideStateException {
         Ride ride = findRideById(rideId);
-        if (ride != null) {
-            ride.completeRide();
-        }
+        if (ride != null) ride.completeRide();
     }
 
-    public void displayAllRides() {
-        for (Ride ride : rides) {
-            ride.displayRideDetails();
-        }
+    public void cancelRide(String rideId) throws InvalidRideStateException {
+        Ride ride = findRideById(rideId);
+        if (ride != null) ride.cancelRide();
     }
 
     public List<Ride> getRides() {
         return rides;
     }
 
-    private Ride findRideById(String rideId) {
-        for (Ride ride : rides) {
-            if (ride.getRideId().equals(rideId)) {
-                return ride;
-            }
+    private Ride findRideById(String id) {
+        for (Ride r : rides) {
+            if (r.getRideId().equals(id)) return r;
         }
         return null;
     }

@@ -1,5 +1,7 @@
 package zipgo.model;
 
+import zipgo.exception.InvalidRideStateException;
+
 public class Ride {
     private String rideId;
     private Rider rider;
@@ -51,17 +53,26 @@ public class Ride {
         driver.setAvailable(false);
     }
 
-    public void startRide() {
+    public void startRide() throws InvalidRideStateException {
+        if (status != RideStatus.ACCEPTED) {
+            throw new InvalidRideStateException("Ride cannot be started in current state");
+        }
         this.status = RideStatus.IN_PROGRESS;
     }
 
-    public void completeRide() {
+    public void completeRide() throws InvalidRideStateException {
+        if (status != RideStatus.IN_PROGRESS) {
+            throw new InvalidRideStateException("Ride cannot be completed in current state");
+        }
         this.fare = vehicle.calculateFare(distance);
         this.status = RideStatus.COMPLETED;
         driver.setAvailable(true);
     }
 
-    public void cancelRide() {
+    public void cancelRide() throws InvalidRideStateException {
+        if (status == RideStatus.IN_PROGRESS || status == RideStatus.COMPLETED) {
+            throw new InvalidRideStateException("Cannot cancel ride at this stage");
+        }
         this.status = RideStatus.CANCELLED;
         if (driver != null) {
             driver.setAvailable(true);

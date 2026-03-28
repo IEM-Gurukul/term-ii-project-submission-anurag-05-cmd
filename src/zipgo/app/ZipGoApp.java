@@ -3,113 +3,81 @@ package zipgo.app;
 import zipgo.model.*;
 import zipgo.service.RideManager;
 import zipgo.storage.FileManager;
-import zipgo.exception.NoDriverAvailableException;
+import zipgo.exception.*;
 
 import java.util.Scanner;
 
 public class ZipGoApp {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
-        RideManager rideManager = new RideManager();
+        RideManager rm = new RideManager();
         Scanner sc = new Scanner(System.in);
 
-        // Setup data
-        Vehicle car1 = new Car("WB01AB1234");
-        Vehicle bike1 = new Bike("WB02CD5678");
+        Vehicle car = new Car("WB01AB1234");
+        Vehicle bike = new Bike("WB02CD5678");
 
         Rider r1 = new Rider("R1", "Anurag", "9000000001");
-        rideManager.addRider(r1);
+        rm.addRider(r1);
 
-        Driver d1 = new Driver("D1", "Rahul", "9000000002", car1);
-        Driver d2 = new Driver("D2", "Amit", "9000000003", bike1);
+        rm.addDriver(new Driver("D1", "Rahul", "9000000002", car));
+        rm.addDriver(new Driver("D2", "Amit", "9000000003", bike));
 
-        rideManager.addDriver(d1);
-        rideManager.addDriver(d2);
-
-        System.out.println("Welcome to ZipGo");
+        System.out.println("===== ZipGo CLI =====");
 
         while (true) {
-            System.out.println("\nLogin as:");
-            System.out.println("1. Rider");
-            System.out.println("2. Driver");
-            System.out.println("3. Exit");
+            System.out.println("\n1. Rider Login\n2. Exit");
+            int ch = sc.nextInt();
 
-            int choice = sc.nextInt();
-
-            if (choice == 1) {
+            if (ch == 1) {
                 System.out.print("Enter Rider ID: ");
-                String riderId = sc.next();
+                String id = sc.next();
 
-                Rider rider = rideManager.getRider(riderId);
+                Rider rider = rm.getRider(id);
                 if (rider == null) {
-                    System.out.println("Invalid Rider ID");
+                    System.out.println("Invalid ID");
                     continue;
                 }
 
-                riderMenu(rideManager, rider, sc);
+                System.out.print("Enter distance: ");
+                double dist = sc.nextDouble();
 
-            } else if (choice == 2) {
-                System.out.print("Enter Driver ID: ");
-                String driverId = sc.next();
+                try {
+                    Ride ride = rm.requestRide("R" + System.currentTimeMillis(), id, dist);
 
-                Driver driver = rideManager.getDriver(driverId);
-                if (driver == null) {
-                    System.out.println("Invalid Driver ID");
-                    continue;
+                    System.out.println("\nDriver Assigned:");
+                    ride.displayRideDetails();
+
+                    System.out.println("Cancel ride? (y/n)");
+                    String cancel = sc.next();
+
+                    if (cancel.equalsIgnoreCase("y")) {
+                        rm.cancelRide(ride.getRideId());
+                        ride.displayRideDetails();
+                        continue;
+                    }
+
+                    System.out.println("\nRide starting...");
+                    Thread.sleep(2000);
+
+                    rm.startRide(ride.getRideId());
+                    ride.displayRideDetails();
+
+                    System.out.println("\nRide in progress...");
+                    Thread.sleep(3000);
+
+                    rm.completeRide(ride.getRideId());
+                    System.out.println("\nRide completed!");
+                    ride.displayRideDetails();
+
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
                 }
 
-                driverMenu(driver, sc);
-
-            } else {
-                break;
-            }
+            } else break;
         }
 
-        FileManager.saveRides(rideManager.getRides());
+        FileManager.saveRides(rm.getRides());
         sc.close();
-    }
-
-    // Rider Menu
-    private static void riderMenu(RideManager rm, Rider rider, Scanner sc) {
-        System.out.println("\nWelcome Rider: " + rider.getName());
-
-        System.out.print("Enter distance: ");
-        double distance = sc.nextDouble();
-
-        try {
-            Ride ride = rm.requestRide("Ride" + System.currentTimeMillis(), rider.getUserId(), distance);
-
-            System.out.println("Driver Assigned!");
-            ride.displayRideDetails();
-
-            System.out.println("Starting Ride...");
-            rm.startRide(ride.getRideId());
-
-            System.out.println("Completing Ride...");
-            rm.completeRide(ride.getRideId());
-
-            ride.displayRideDetails();
-
-        } catch (NoDriverAvailableException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    // Driver Menu
-    private static void driverMenu(Driver driver, Scanner sc) {
-        System.out.println("\nWelcome Driver: " + driver.getName());
-        System.out.println("1. Set Available");
-        System.out.println("2. Set Unavailable");
-
-        int ch = sc.nextInt();
-
-        if (ch == 1) {
-            driver.setAvailable(true);
-            System.out.println("You are now AVAILABLE");
-        } else {
-            driver.setAvailable(false);
-            System.out.println("You are now UNAVAILABLE");
-        }
     }
 }
