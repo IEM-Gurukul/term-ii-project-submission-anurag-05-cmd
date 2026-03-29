@@ -9,71 +9,64 @@ public class RideManager {
 
     private Map<String, Rider> riders = new HashMap<>();
     private Map<String, Driver> drivers = new HashMap<>();
-    private List<Ride> rides = new ArrayList<>();
 
-    public void addRider(Rider rider) {
+    private List<Ride> rides = new ArrayList<>();
+    private Queue<Ride> rideQueue = new LinkedList<>();
+
+    public synchronized void addRider(Rider rider) {
         riders.put(rider.getUserId(), rider);
     }
 
-    public void addDriver(Driver driver) {
+    public synchronized void addDriver(Driver driver) {
         drivers.put(driver.getUserId(), driver);
     }
 
-    public Rider getRider(String riderId) {
-        return riders.get(riderId);
+    public Rider getRider(String id) {
+        return riders.get(id);
     }
 
-    public Driver getDriver(String driverId) {
-        return drivers.get(driverId);
+    public Driver getDriver(String id) {
+        return drivers.get(id);
     }
 
-    public Ride requestRide(String rideId, String riderId, double distance)
-            throws NoDriverAvailableException {
-
+    public synchronized Ride requestRide(String rideId, String riderId, double distance) {
         Rider rider = riders.get(riderId);
-        if (rider == null) {
-            throw new IllegalArgumentException("Rider not found");
-        }
-
-        Driver driver = findAvailableDriver();
-        if (driver == null) {
-            throw new NoDriverAvailableException("No drivers available");
-        }
+        if (rider == null) throw new IllegalArgumentException("Rider not found");
 
         Ride ride = new Ride(rideId, rider, distance);
-        ride.assignDriver(driver, driver.getVehicle());
+        rideQueue.add(ride);
         rides.add(ride);
+
+        System.out.println("Ride requested. Waiting for driver...");
 
         return ride;
     }
 
-    private Driver findAvailableDriver() {
-        for (Driver d : drivers.values()) {
-            if (d.isAvailable()) return d;
-        }
-        return null;
+    public synchronized Ride assignRideToDriver(Driver driver) {
+        if (!driver.isAvailable()) return null;
+
+        Ride ride = rideQueue.poll();
+        if (ride == null) return null;
+
+        ride.assignDriver(driver, driver.getVehicle());
+        return ride;
     }
 
-    public void startRide(String rideId) throws InvalidRideStateException {
-        Ride ride = findRideById(rideId);
-        if (ride != null) ride.startRide();
+    public synchronized void startRide(String rideId) throws InvalidRideStateException {
+        Ride r = findRideById(rideId);
+        if (r != null) r.startRide();
     }
 
-    public void completeRide(String rideId) throws InvalidRideStateException {
-        Ride ride = findRideById(rideId);
-        if (ride != null) ride.completeRide();
+    public synchronized void completeRide(String rideId) throws InvalidRideStateException {
+        Ride r = findRideById(rideId);
+        if (r != null) r.completeRide();
     }
 
-    public void cancelRide(String rideId) throws InvalidRideStateException {
-        Ride ride = findRideById(rideId);
-        if (ride != null) ride.cancelRide();
+    public synchronized void cancelRide(String rideId) throws InvalidRideStateException {
+        Ride r = findRideById(rideId);
+        if (r != null) r.cancelRide();
     }
 
-    public List<Ride> getRides() {
-        return rides;
-    }
-
-    // Reports
     public int getTotalRides() {
         return rides.size();
     }
