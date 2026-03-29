@@ -140,6 +140,8 @@ public class ZipGoApp {
 
                                 System.out.println("\nRide completed:");
                                 ride.displayRideDetails();
+
+                                FileManager.saveRides(rm.getRides());
                             }
 
                         } catch (Exception e) {
