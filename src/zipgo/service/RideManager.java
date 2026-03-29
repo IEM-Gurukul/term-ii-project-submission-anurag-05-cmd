@@ -31,7 +31,8 @@ public class RideManager {
 
     public synchronized Ride requestRide(String rideId, String riderId, double distance) {
         Rider rider = riders.get(riderId);
-        if (rider == null) throw new IllegalArgumentException("Rider not found");
+        if (rider == null)
+            throw new IllegalArgumentException("Rider not found");
 
         Ride ride = new Ride(rideId, rider, distance);
         rideQueue.add(ride);
@@ -39,32 +40,50 @@ public class RideManager {
 
         System.out.println("Ride requested. Waiting for driver...");
 
+        notifyAll(); // notify waiting drivers
+
         return ride;
     }
 
     public synchronized Ride assignRideToDriver(Driver driver) {
-        if (!driver.isAvailable()) return null;
+        while (rideQueue.isEmpty()) {
+            try {
+                System.out.println("Driver waiting for ride requests...");
+                wait(); // wait until a ride is requested
+            } catch (InterruptedException e) {
+                return null;
+            }
+        }
+
+        if (!driver.isAvailable())
+            return null;
 
         Ride ride = rideQueue.poll();
-        if (ride == null) return null;
-
         ride.assignDriver(driver, driver.getVehicle());
+
         return ride;
     }
 
     public synchronized void startRide(String rideId) throws InvalidRideStateException {
         Ride r = findRideById(rideId);
-        if (r != null) r.startRide();
+        if (r != null)
+            r.startRide();
     }
 
     public synchronized void completeRide(String rideId) throws InvalidRideStateException {
         Ride r = findRideById(rideId);
-        if (r != null) r.completeRide();
+        if (r != null)
+            r.completeRide();
     }
 
     public synchronized void cancelRide(String rideId) throws InvalidRideStateException {
         Ride r = findRideById(rideId);
-        if (r != null) r.cancelRide();
+        if (r != null)
+            r.cancelRide();
+    }
+
+    public List<Ride> getRides() {
+        return rides;
     }
 
     public int getTotalRides() {
@@ -81,9 +100,25 @@ public class RideManager {
         return total;
     }
 
+    public double getDriverEarnings(String driverId) {
+        double total = 0;
+
+        for (Ride r : rides) {
+            if (r.getDriver() != null &&
+                    r.getDriver().getUserId().equals(driverId) &&
+                    r.getStatus() == RideStatus.COMPLETED) {
+
+                total += r.getFare();
+            }
+        }
+
+        return total;
+    }
+
     private Ride findRideById(String id) {
         for (Ride r : rides) {
-            if (r.getRideId().equals(id)) return r;
+            if (r.getRideId().equals(id))
+                return r;
         }
         return null;
     }

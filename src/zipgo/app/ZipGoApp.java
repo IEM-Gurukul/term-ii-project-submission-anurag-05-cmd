@@ -2,10 +2,13 @@ package zipgo.app;
 
 import zipgo.model.*;
 import zipgo.service.RideManager;
+import zipgo.storage.FileManager;
 
-import java.util.Scanner;
+import java.util.*;
 
 public class ZipGoApp {
+
+    private static volatile boolean running = true;
 
     public static void main(String[] args) {
 
@@ -20,44 +23,36 @@ public class ZipGoApp {
         rm.addRider(rider);
         rm.addDriver(driver);
 
-        Thread driverThread = new Thread(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(2000);
+        System.out.println("ZipGo started");
 
-                    if (driver.isAvailable()) {
-                        Ride ride = rm.assignRideToDriver(driver);
+        while (running) {
+            System.out.println("\nLogin as:");
+            System.out.println("1. Rider");
+            System.out.println("2. Driver");
+            System.out.println("3. Exit");
 
-                        if (ride != null) {
-                            System.out.println("\nDriver accepted ride: " + ride.getRideId());
+            int choice = sc.nextInt();
 
-                            Thread.sleep(2000);
-                            rm.startRide(ride.getRideId());
-                            System.out.println("Ride started");
-
-                            Thread.sleep(3000);
-                            rm.completeRide(ride.getRideId());
-                            System.out.println("Ride completed");
-
-                            ride.displayRideDetails();
-                        }
-                    }
-
-                } catch (Exception e) {
-                    System.out.println(e.getMessage());
-                }
+            if (choice == 1) {
+                riderSession(rm, rider);
+            } else if (choice == 2) {
+                driverSession(rm, driver);
+            } else {
+                shutdown(rm);
             }
-        });
+        }
 
-        driverThread.start();
+        sc.close();
+    }
 
-        System.out.println("ZipGo is running");
+    private static void riderSession(RideManager rm, Rider rider) {
+        Scanner sc = new Scanner(System.in);
 
-        while (true) {
-            System.out.println("\n1. Request Ride");
-            System.out.println("2. Toggle Driver Availability");
-            System.out.println("3. Show Report");
-            System.out.println("4. Exit");
+        while (running) {
+            System.out.println("\nRider Menu");
+            System.out.println("1. Request Ride");
+            System.out.println("2. View My Trips");
+            System.out.println("3. Logout");
 
             int ch = sc.nextInt();
 
@@ -65,20 +60,113 @@ public class ZipGoApp {
                 System.out.print("Enter distance: ");
                 double dist = sc.nextDouble();
 
-                rm.requestRide("R" + System.currentTimeMillis(), "R1", dist);
+                Ride ride = rm.requestRide("R" + System.currentTimeMillis(), rider.getUserId(), dist);
+
+                new Thread(() -> {
+                    while (running) {
+                        try {
+                            Thread.sleep(1000);
+
+                            if (ride.getStatus() == RideStatus.ACCEPTED) {
+                                System.out.println("\nDriver assigned for " + ride.getRideId());
+                            }
+
+                            if (ride.getStatus() == RideStatus.IN_PROGRESS) {
+                                System.out.println("\nRide started: " + ride.getRideId());
+                            }
+
+                            if (ride.getStatus() == RideStatus.COMPLETED) {
+                                System.out.println("\nRide completed:");
+                                ride.displayRideDetails();
+                                break;
+                            }
+
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+                    }
+                }).start();
 
             } else if (ch == 2) {
-                driver.setAvailable(!driver.isAvailable());
-                System.out.println("Driver availability: " + driver.isAvailable());
-
-            } else if (ch == 3) {
-                System.out.println("Total rides: " + rm.getTotalRides());
-                System.out.println("Total earnings: ₹" + rm.getTotalEarnings());
+                for (Ride r : rm.getRides()) {
+                    if (r.getRider().getUserId().equals(rider.getUserId())) {
+                        r.displayRideDetails();
+                    }
+                }
             } else {
                 break;
             }
         }
+    }
 
-        sc.close();
+    private static void driverSession(RideManager rm, Driver driver) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("\nDriver logged in");
+
+        while (running) {
+            System.out.println("\nDriver Menu");
+            System.out.println("1. Go Online");
+            System.out.println("2. Go Offline");
+            System.out.println("3. Start Listening");
+            System.out.println("4. View Earnings");
+            System.out.println("5. Logout");
+
+            int ch = sc.nextInt();
+
+            if (ch == 1) {
+                driver.setAvailable(true);
+                System.out.println("Driver is ONLINE");
+
+            } else if (ch == 2) {
+                driver.setAvailable(false);
+                System.out.println("Driver is OFFLINE");
+
+            } else if (ch == 3) {
+
+                new Thread(() -> {
+                    while (running) {
+                        try {
+                            Ride ride = rm.assignRideToDriver(driver);
+
+                            if (ride != null) {
+                                System.out.println("\nNew ride:");
+                                ride.displayRideDetails();
+
+                                rm.startRide(ride.getRideId());
+                                Thread.sleep(3000);
+
+                                rm.completeRide(ride.getRideId());
+
+                                System.out.println("\nRide completed:");
+                                ride.displayRideDetails();
+                            }
+
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage());
+                        }
+                    }
+                }).start();
+
+                System.out.println("Listening for rides...");
+
+            } else if (ch == 4) {
+                double earnings = rm.getDriverEarnings(driver.getUserId());
+                System.out.println("Total earnings: ₹" + earnings);
+
+            } else {
+                break;
+            }
+        }
+    }
+
+    private static void shutdown(RideManager rm) {
+        running = false;
+
+        System.out.println("\nSaving rides to file...");
+        FileManager.saveRides(rm.getRides());
+
+        System.out.println("System shutting down");
+        System.exit(0);
     }
 }
